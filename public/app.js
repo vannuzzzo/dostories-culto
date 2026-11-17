@@ -1,5 +1,6 @@
 import { dateFields, slug } from '/lib/dates.js';
 import { drawOverlay, loadFont } from './draw.js';
+import { cssFilter } from '/lib/color.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('canvas'), ctx = canvas.getContext('2d');
@@ -44,6 +45,15 @@ $('bgFile').addEventListener('change', (e) => setBg(e.target.files[0]));
 // A file dropped anywhere else would make the browser open it and lose all edits.
 ['dragover', 'drop'].forEach((ev) => window.addEventListener(ev, (e) => e.preventDefault()));
 $('bgDrop').addEventListener('drop', (e) => { e.preventDefault(); setBg(e.dataTransfer.files[0]); });
+
+// --- Background color (Hue/Saturation). Same math as the export, see lib/color.js ---
+function applyColor() {
+  $('hueLabel').textContent = `${$('hue').value}°`;
+  $('satLabel').textContent = $('sat').value;
+  video.style.filter = cssFilter(+$('hue').value, +$('sat').value);
+}
+['hue', 'sat'].forEach((id) => $(id).addEventListener('input', applyColor));
+$('colorReset').addEventListener('click', () => { $('hue').value = 0; $('sat').value = 0; applyColor(); });
 
 // --- Music ---
 document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => {
@@ -143,6 +153,8 @@ $('export').addEventListener('click', async () => {
     if (music?.file) fd.append('audio', music.file);
     if (music?.audioId) fd.append('audioId', music.audioId);
     fd.append('start', $('start').value);
+    fd.append('hue', $('hue').value);
+    fd.append('sat', $('sat').value);
     fd.append('name', name);
     const blob = await (await api('/render', { method: 'POST', body: fd })).blob();
     const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `${name}.mp4` });

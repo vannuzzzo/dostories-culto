@@ -25,6 +25,7 @@ app.use((req, res, next) => {
 });
 app.use(express.static(join(ROOT, 'public')));
 app.get('/lib/dates.js', (req, res) => res.sendFile(join(ROOT, 'lib/dates.js')));
+app.get('/lib/color.js', (req, res) => res.sendFile(join(ROOT, 'lib/color.js')));
 
 app.get('/music/search', async (req, res) => {
   try {
@@ -67,8 +68,10 @@ app.post('/render', upload.fields([{ name: 'bg' }, { name: 'overlay' }, { name: 
     let audio = req.files?.audio?.[0]?.path;
     if (!audio && /^[a-f0-9]{40}$/.test(req.body.audioId ?? '')) audio = join(CACHE, `${req.body.audioId}.mp3`);
     const start = Math.max(0, Number(req.body.start) || 0);
+    const clamp = (v, lim) => Math.max(-lim, Math.min(lim, Number(v) || 0));
+    const hue = clamp(req.body.hue, 180), sat = clamp(req.body.sat, 100);
     const duration = await probeDuration(bg);
-    await runFfmpeg(renderArgs({ bg, overlay, audio, start, duration, out }));
+    await runFfmpeg(renderArgs({ bg, overlay, audio, start, duration, hue, sat, out }));
     const name = (req.body.name || 'story').replace(/[^a-z0-9-]/gi, '') || 'story';
     res.download(out, `${name}.mp4`, cleanup);
   } catch (e) {

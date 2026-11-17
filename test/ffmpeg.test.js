@@ -1,6 +1,6 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { renderArgs, runFfmpeg, probeDuration } from '../lib/ffmpeg.js';
@@ -38,4 +38,12 @@ test('near-9:16 input comes out with square pixels', async () => {
   await runFfmpeg(['-y', '-f', 'lavfi', '-i', 'testsrc=size=1000x1778:rate=30', '-t', '1', '-pix_fmt', 'yuv420p', f('odd.mp4')]);
   await runFfmpeg(renderArgs({ bg: f('odd.mp4'), overlay: f('overlay.png'), duration: 1, out: f('c.mp4') }));
   assert.match(await probe(f('c.mp4')), /1080x1920 \[SAR 1:1 DAR 9:16\]/);
+});
+
+test('saturation -100 turns the background gray', async () => {
+  await runFfmpeg(['-y', '-f', 'lavfi', '-i', 'color=c=red:s=1080x1920:r=30', '-t', '1', '-pix_fmt', 'yuv420p', f('red.mp4')]);
+  await runFfmpeg(renderArgs({ bg: f('red.mp4'), overlay: f('overlay.png'), duration: 1, sat: -100, out: f('gray.mp4') }));
+  await runFfmpeg(['-y', '-i', f('gray.mp4'), '-frames:v', '1', '-vf', 'crop=2:2:540:960', '-f', 'rawvideo', '-pix_fmt', 'rgb24', f('px.rgb')]);
+  const [r, g, b] = readFileSync(f('px.rgb'));
+  assert.ok(Math.abs(r - g) < 6 && Math.abs(g - b) < 6, `pixel ${r},${g},${b} is not gray`);
 });

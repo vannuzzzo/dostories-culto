@@ -11,6 +11,7 @@
 <style>
   :root { --bg: #0e0e0f; --panel: #17171a; --line: #2a2a2f; --text: #ececec; --muted: #8a8a92; --accent: #d11a1a; }
   * { box-sizing: border-box; }
+  input[type=range] { accent-color: var(--accent); padding: 0; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 -apple-system, system-ui, sans-serif; }
   main { display: grid; grid-template-columns: 380px 1fr; gap: 24px; padding: 24px; min-height: 100vh; }
   aside { display: flex; flex-direction: column; gap: 16px; }
@@ -50,6 +51,13 @@
       <label class="drop" id="bgDrop">Trascina qui il video di sfondo o clicca
         <input type="file" id="bgFile" accept="video/*" hidden>
       </label>
+      <label><span>Tonalità: <span id="hueLabel">0°</span></span>
+        <input type="range" id="hue" min="-180" max="180" step="1" value="0">
+      </label>
+      <label><span>Saturazione: <span id="satLabel">0</span></span>
+        <input type="range" id="sat" min="-100" max="100" step="1" value="0">
+      </label>
+      <button id="colorReset">Ripristina colore</button>
     </section>
 
     <section>
@@ -86,7 +94,7 @@
       <label id="tab-file" hidden>File audio <input type="file" id="audioFile" accept="audio/*"></label>
       <div id="player" hidden class="row" style="--n:1">
         <div id="track"></div>
-        <label>Inizio brano: <span id="startLabel">0:00</span>
+        <label><span>Inizio brano: <span id="startLabel">0:00</span></span>
           <input type="range" id="start" min="0" max="0" step="0.5" value="0">
         </label>
         <button id="preview">▶ Anteprima con musica</button>
