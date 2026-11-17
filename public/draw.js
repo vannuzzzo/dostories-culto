@@ -4,26 +4,28 @@
 export const LAYOUT = {
   font: '"Cossette Titre"',
   color: '#DEDEDE',
-  line1: { baseline: 459, cap: 150, right: 890, scaleX: 1.014 }, // "NOV. 19" + sup
+  weight: 700, // 400 = Regular, 700 = Bold
+  line1: { baseline: 459, cap: 150, right: 890, scaleX: 0.952 }, // "NOV. 19" + sup
   sup: { cap: 87, gap: 5 },                                  // "TH": top aligned to line1, gap = space before it
-  line2: { baseline: 622, cap: 150, right: 896, scaleX: 1.013, minLeft: 192 }, // venue
-  info: { baseline: 665, cap: 29.5, left: 192, right: 894, scaleX: 0.975 },     // weekday (left) + date (right)
-  bottom: { baseline: 1670, cap: 30, left: 195, right: 894, scaleX: 0.97 },  // 4 words, spread edge to edge
+  line2: { baseline: 622, cap: 150, right: 896, scaleX: 0.956, minLeft: 192 }, // venue
+  info: { baseline: 666, cap: 30, left: 192, right: 894, scaleX: 0.94 },     // weekday (left) + date (right)
+  bottom: { baseline: 1670, cap: 30, left: 195, right: 894, scaleX: 0.93 },  // 4 words, spread edge to edge
 };
 
 let capRatio = 0.7; // cap height / font size, measured once the font is loaded
 
 // text = every string about to be drawn, so all needed glyphs are loaded. Throws if the font is unavailable.
 export async function loadFont(text = 'A') {
-  await document.fonts.load(`200px ${LAYOUT.font}`, text);
-  if (!document.fonts.check(`200px ${LAYOUT.font}`, text)) throw new Error('Font Cossette Titre non caricato');
+  const f = `${LAYOUT.weight} 200px ${LAYOUT.font}`;
+  await document.fonts.load(f, text);
+  if (!document.fonts.check(f, text)) throw new Error('Font Cossette Titre non caricato');
   const ctx = new OffscreenCanvas(10, 10).getContext('2d');
-  ctx.font = `100px ${LAYOUT.font}`;
+  ctx.font = `${LAYOUT.weight} 100px ${LAYOUT.font}`;
   capRatio = ctx.measureText('H').actualBoundingBoxAscent / 100;
 }
 
 let sx = 1;
-const setFont = (ctx, cap, scaleX = 1) => { sx = scaleX; ctx.font = `${cap / capRatio}px ${LAYOUT.font}`; };
+const setFont = (ctx, cap, scaleX = 1) => { sx = scaleX; ctx.font = `${LAYOUT.weight} ${cap / capRatio}px ${LAYOUT.font}`; };
 // Ink box of s (scaled): width and offset of the ink's left edge from the pen position.
 function ink(ctx, s) {
   const m = ctx.measureText(s);
