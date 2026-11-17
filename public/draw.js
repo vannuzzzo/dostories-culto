@@ -1,18 +1,14 @@
-// All values in 1080x1920 px, measured from the After Effects comp. Tune here if something is off.
-// cap = height of capital letters (font size is derived from it at runtime).
-// scaleX = horizontal stretch, bold = faux-bold stroke as a fraction of cap height (matches the AE look).
+// All values in 1080x1920 px, measured on the reference layout PNG. Tune here if something is off.
+// cap = height of capital letters (font size is derived from it), baseline = bottom of capitals,
+// left/right = ink edges of the row, scaleX = horizontal stretch of the letters.
 export const LAYOUT = {
   font: '"Cossette Titre"',
-  color: '#EDEDED',
-  scaleX: 1.01, // default; rows may override with their own scaleX
-  bold: 0.03,
-  left: 193,
-  right: 900,
-  line1: { baseline: 424, cap: 149 }, // "NOV. 19" + sup
-  sup: { cap: 80 },                   // "TH", top aligned to line1 cap top
-  line2: { baseline: 586, cap: 149 }, // venue
-  info: { baseline: 626, cap: 34, scaleX: 0.97 }, // weekday (left) + date (right)
-  bottom: { baseline: 1633, cap: 33, scaleX: 0.97, left: 196, right: 897 }, // 4 words, spread edge to edge
+  color: '#DEDEDE',
+  line1: { baseline: 459, cap: 150, right: 890, scaleX: 1.014 }, // "NOV. 19" + sup
+  sup: { cap: 87, gap: 5 },                                  // "TH": top aligned to line1, gap = space before it
+  line2: { baseline: 622, cap: 150, right: 896, scaleX: 1.013, minLeft: 192 }, // venue
+  info: { baseline: 665, cap: 29.5, left: 192, right: 894, scaleX: 0.975 },     // weekday (left) + date (right)
+  bottom: { baseline: 1670, cap: 30, left: 195, right: 894, scaleX: 0.97 },  // 4 words, spread edge to edge
 };
 
 let capRatio = 0.7; // cap height / font size, measured once the font is loaded
@@ -26,65 +22,67 @@ export async function loadFont(text = 'A') {
   capRatio = ctx.measureText('H').actualBoundingBoxAscent / 100;
 }
 
-let cap = 0, sx = 1;
-const setFont = (ctx, c) => { cap = c; ctx.font = `${c / capRatio}px ${LAYOUT.font}`; };
-const width = (ctx, s) => ctx.measureText(s).width * sx;
+let sx = 1;
+const setFont = (ctx, cap, scaleX = 1) => { sx = scaleX; ctx.font = `${cap / capRatio}px ${LAYOUT.font}`; };
+// Ink box of s (scaled): width and offset of the ink's left edge from the pen position.
+function ink(ctx, s) {
+  const m = ctx.measureText(s);
+  return { w: (m.actualBoundingBoxLeft + m.actualBoundingBoxRight) * sx, off: m.actualBoundingBoxLeft * sx };
+}
 
-// Draws s with its left edge at x (after horizontal scaling) + faux-bold stroke.
+// Draws s with its ink's left edge at x.
 function text(ctx, s, x, y) {
   ctx.save();
-  ctx.translate(x, y);
+  ctx.translate(x + ink(ctx, s).off, y);
   ctx.scale(sx, 1);
   ctx.textAlign = 'left';
   ctx.fillText(s, 0, 0);
-  if (LAYOUT.bold) { ctx.lineWidth = cap * LAYOUT.bold; ctx.lineJoin = 'round'; ctx.strokeText(s, 0, 0); }
   ctx.restore();
 }
 
-// Sets the font for cap, shrunk if the text is wider than maxW; returns the cap used.
-function fit(ctx, s, c, maxW) {
-  setFont(ctx, c);
-  const w = width(ctx, s);
-  if (w > maxW) setFont(ctx, (c * maxW) / w);
-  return cap;
+// Sets the font for the row, shrunk if the ink is wider than maxW; returns the cap used.
+function fit(ctx, s, row, maxW) {
+  setFont(ctx, row.cap, row.scaleX);
+  const w = ink(ctx, s).w;
+  if (w <= maxW) return row.cap;
+  setFont(ctx, (row.cap * maxW) / w, row.scaleX);
+  return (row.cap * maxW) / w;
 }
 
 export function drawOverlay(ctx, f) {
   const L = LAYOUT;
-  const W = L.right - L.left;
   ctx.clearRect(0, 0, 1080, 1920);
-  ctx.fillStyle = ctx.strokeStyle = L.color;
+  ctx.fillStyle = L.color;
   ctx.textBaseline = 'alphabetic';
 
   // Line 1: "NOV. 19" + superscript, right-aligned as a block.
-  sx = L.scaleX;
-  setFont(ctx, L.sup.cap);
-  const supW = width(ctx, f.sup);
   const main1 = `${f.month} ${f.day}`.trim();
-  const cap1 = fit(ctx, main1, L.line1.cap, W - supW);
-  text(ctx, main1, L.right - supW - width(ctx, main1), L.line1.baseline);
-  const supCap = L.sup.cap * (cap1 / L.line1.cap);
-  setFont(ctx, supCap);
-  text(ctx, f.sup, L.right - width(ctx, f.sup), L.line1.baseline - cap1 + supCap);
+  setFont(ctx, L.sup.cap, L.line1.scaleX);
+  const supW = f.sup ? ink(ctx, f.sup).w + L.sup.gap : 0;
+  const cap1 = fit(ctx, main1, L.line1, L.line1.right - L.line2.minLeft - supW);
+  text(ctx, main1, L.line1.right - supW - ink(ctx, main1).w, L.line1.baseline);
+  if (f.sup) {
+    const supCap = L.sup.cap * (cap1 / L.line1.cap);
+    setFont(ctx, supCap, L.line1.scaleX);
+    text(ctx, f.sup, L.line1.right - ink(ctx, f.sup).w, L.line1.baseline - cap1 + supCap);
+  }
 
   // Line 2: venue.
-  fit(ctx, f.venue, L.line2.cap, W);
-  text(ctx, f.venue, L.right - width(ctx, f.venue), L.line2.baseline);
+  fit(ctx, f.venue, L.line2, L.line2.right - L.line2.minLeft);
+  text(ctx, f.venue, L.line2.right - ink(ctx, f.venue).w, L.line2.baseline);
 
   // Weekday / date.
-  sx = L.info.scaleX ?? L.scaleX;
-  setFont(ctx, L.info.cap);
-  text(ctx, f.weekday, L.left, L.info.baseline);
-  text(ctx, f.date, L.right - width(ctx, f.date), L.info.baseline);
+  setFont(ctx, L.info.cap, L.info.scaleX);
+  text(ctx, f.weekday, L.info.left, L.info.baseline);
+  text(ctx, f.date, L.info.right - ink(ctx, f.date).w, L.info.baseline);
 
   // Bottom row: words spread edge to edge.
-  sx = L.bottom.scaleX ?? L.scaleX;
-  setFont(ctx, L.bottom.cap);
+  const B = L.bottom;
+  setFont(ctx, B.cap, B.scaleX);
   const words = f.bottom.filter(Boolean);
-  if (words.length === 1) return text(ctx, words[0], 540 - width(ctx, words[0]) / 2, L.bottom.baseline);
-  const widths = words.map((w) => width(ctx, w));
-  const BW = L.bottom.right - L.bottom.left;
-  const gap = (BW - widths.reduce((a, b) => a + b, 0)) / (words.length - 1);
-  let x = L.bottom.left;
-  words.forEach((w, i) => { text(ctx, w, x, L.bottom.baseline); x += widths[i] + gap; });
+  if (words.length === 1) return text(ctx, words[0], 540 - ink(ctx, words[0]).w / 2, B.baseline);
+  const widths = words.map((w) => ink(ctx, w).w);
+  const gap = (B.right - B.left - widths.reduce((a, b) => a + b, 0)) / (words.length - 1);
+  let x = B.left;
+  words.forEach((w, i) => { text(ctx, w, x, B.baseline); x += widths[i] + gap; });
 }
