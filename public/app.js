@@ -83,7 +83,8 @@ $('audioFile').addEventListener('change', (e) => {
 });
 
 async function api(url, opts) {
-  const r = await fetch(url, opts);
+  // fetch only throws when the server is unreachable (Terminal window closed / tool stopped).
+  const r = await fetch(url, opts).catch(() => { throw new Error('Il tool non è attivo: riaprilo con Avvia Culto.command e ricarica la pagina'); });
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `Errore ${r.status}`);
   return r;
 }
