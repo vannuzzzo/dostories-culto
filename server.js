@@ -71,5 +71,5 @@ export { app };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   await mkdir(CACHE, { recursive: true });
-  app.listen(PORT, '127.0.0.1', () => console.log(`Culto Stories → http://localhost:${PORT}`));
+  app.listen(PORT, '127.0.0.1', () => console.log(`Culto Stories → http://127.0.0.1:${PORT}`));
 }
