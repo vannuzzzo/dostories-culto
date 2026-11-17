@@ -41,7 +41,8 @@ function setBg(file) {
   status('');
 }
 $('bgFile').addEventListener('change', (e) => setBg(e.target.files[0]));
-$('bgDrop').addEventListener('dragover', (e) => e.preventDefault());
+// A file dropped anywhere else would make the browser open it and lose all edits.
+['dragover', 'drop'].forEach((ev) => window.addEventListener(ev, (e) => e.preventDefault()));
 $('bgDrop').addEventListener('drop', (e) => { e.preventDefault(); setBg(e.dataTransfer.files[0]); });
 
 // --- Music ---
@@ -110,15 +111,18 @@ async function search() {
 $('go').addEventListener('click', search);
 $('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') search(); });
 
+let lastDownload = 0; // only the most recent click wins
 async function download(t) {
+  const mine = ++lastDownload;
   status(`Scarico "${t.title}"…`);
   try {
     const { audioId } = await (await api('/music/download', {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url: t.url }),
     })).json();
+    if (mine !== lastDownload) return;
     setMusic({ audioId }, t.title, `/music/file/${audioId}`);
     status('');
-  } catch (e) { status(e.message, true); }
+  } catch (e) { if (mine === lastDownload) status(e.message, true); }
 }
 
 // --- Export ---
@@ -128,7 +132,7 @@ $('export').addEventListener('click', async () => {
   $('export').textContent = 'Esporto…';
   status('');
   try {
-    await loadFont();
+    await loadFont(Object.values(fields()).flat().join(''));
     redraw();
     const png = await new Promise((r) => canvas.toBlob(r, 'image/png'));
     const name = [$('pick').value, slug($('venue').value)].filter(Boolean).join('-') || 'story';
@@ -149,5 +153,5 @@ $('export').addEventListener('click', async () => {
 });
 
 // Font must be loaded before the first draw, or the canvas uses a fallback font.
-await loadFont();
+await loadFont().catch((e) => status(e.message, true));
 applyDate();

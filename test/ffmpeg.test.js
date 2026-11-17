@@ -33,3 +33,9 @@ test('no audio', async () => {
 });
 
 test('probeDuration', async () => assert.equal(await probeDuration(f('bg.mp4')), 3));
+
+test('near-9:16 input comes out with square pixels', async () => {
+  await runFfmpeg(['-y', '-f', 'lavfi', '-i', 'testsrc=size=1000x1778:rate=30', '-t', '1', '-pix_fmt', 'yuv420p', f('odd.mp4')]);
+  await runFfmpeg(renderArgs({ bg: f('odd.mp4'), overlay: f('overlay.png'), duration: 1, out: f('c.mp4') }));
+  assert.match(await probe(f('c.mp4')), /1080x1920 \[SAR 1:1 DAR 9:16\]/);
+});

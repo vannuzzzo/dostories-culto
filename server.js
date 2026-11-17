@@ -11,10 +11,18 @@ import { searchArgs, parseSearch, downloadArgs, runYtDlp, audioId } from './lib/
 const ROOT = dirname(fileURLToPath(import.meta.url));
 export const CACHE = join(ROOT, 'cache');
 const PORT = 4747;
+const pending = new Map(); // audioId -> running download
 
 const app = express();
 const upload = multer({ dest: join(tmpdir(), 'culto-uploads') });
 
+// Only this page may talk to the server: blocks other websites (Origin) and DNS rebinding (Host).
+const LOCAL = /^(127\.0\.0\.1|localhost)(:\d+)?$/;
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (!LOCAL.test(req.headers.host ?? '') || (origin && !LOCAL.test(origin.replace(/^http:\/\//, '')))) return res.sendStatus(403);
+  next();
+});
 app.use(express.static(join(ROOT, 'public')));
 app.get('/lib/dates.js', (req, res) => res.sendFile(join(ROOT, 'lib/dates.js')));
 
@@ -33,7 +41,10 @@ app.post('/music/download', express.json(), async (req, res) => {
     const url = String(req.body?.url ?? '');
     if (!/^https:\/\//.test(url)) throw new Error('Link non valido');
     const id = audioId(url);
-    if (!existsSync(join(CACHE, `${id}.mp3`))) await runYtDlp(downloadArgs(url, join(CACHE, id)));
+    if (!existsSync(join(CACHE, `${id}.mp3`))) {
+      if (!pending.has(id)) pending.set(id, runYtDlp(downloadArgs(url, join(CACHE, id))).finally(() => pending.delete(id)));
+      await pending.get(id);
+    }
     res.json({ audioId: id });
   } catch (e) {
     res.status(500).json({ error: `Download fallito: ${e.message}` });

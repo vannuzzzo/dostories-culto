@@ -17,8 +17,10 @@ export const LAYOUT = {
 
 let capRatio = 0.7; // cap height / font size, measured once the font is loaded
 
-export async function loadFont() {
-  await document.fonts.load(`200px ${LAYOUT.font}`);
+// text = every string about to be drawn, so all needed glyphs are loaded. Throws if the font is unavailable.
+export async function loadFont(text = 'A') {
+  await document.fonts.load(`200px ${LAYOUT.font}`, text);
+  if (!document.fonts.check(`200px ${LAYOUT.font}`, text)) throw new Error('Font Cossette Titre non caricato');
   const ctx = new OffscreenCanvas(10, 10).getContext('2d');
   ctx.font = `100px ${LAYOUT.font}`;
   capRatio = ctx.measureText('H').actualBoundingBoxAscent / 100;

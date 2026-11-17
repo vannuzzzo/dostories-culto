@@ -33,3 +33,9 @@ test('audioId is a stable sha1', () => {
 test('runYtDlp rejects on non-zero exit', async () => {
   await assert.rejects(runYtDlp(['x'], '/usr/bin/false'));
 });
+
+test('runYtDlp kills the process after the timeout', async () => {
+  const t0 = Date.now();
+  await assert.rejects(runYtDlp(['5'], '/bin/sleep', 200), /scaduto/);
+  assert.ok(Date.now() - t0 < 2000);
+});
