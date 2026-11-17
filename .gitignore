@@ -1,0 +1,9 @@
+node_modules/
+bin/
+cache/
+.superpowers/
+*.mp4
+*.mov
+*.mp3
+*.m4a
+.DS_Store
