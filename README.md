@@ -10,7 +10,7 @@ Serve [Node.js](https://nodejs.org) (versione 20 o superiore).
 ./scripts/setup.sh
 ```
 
-Installa le dipendenze (ffmpeg incluso) e scarica `yt-dlp` in `bin/`.
+Installa le dipendenze (ffmpeg incluso) e scarica `yt-dlp` in `bin/yt-dlp_macos/`.
 
 ## Uso quotidiano
 
@@ -28,7 +28,7 @@ Posizioni, dimensioni e colore dei testi sono in `LAYOUT`, in cima a `public/dra
 
 ## Manutenzione
 
-- Se YouTube smette di scaricare: `bin/yt-dlp -U` (aggiorna yt-dlp).
+- Se YouTube smette di scaricare, aggiorna yt-dlp: cancella la cartella `bin/` e rilancia `./scripts/setup.sh`.
 - Alcuni brani SoundCloud sono protetti (DRM) e non si possono scaricare.
 
 ## Nota sui diritti

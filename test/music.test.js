@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { searchArgs, parseSearch, downloadArgs, runYtDlp, audioId } from '../lib/music.js';
+import { existsSync } from 'node:fs';
+import { searchArgs, parseSearch, downloadArgs, runYtDlp, audioId, YTDLP } from '../lib/music.js';
 
 test('searchArgs', () => {
   assert.equal(searchArgs('belo', 'sc').at(-1), 'scsearch10:belo');
@@ -38,4 +39,10 @@ test('runYtDlp kills the process after the timeout', async () => {
   const t0 = Date.now();
   await assert.rejects(runYtDlp(['5'], '/bin/sleep', 200), /scaduto/);
   assert.ok(Date.now() - t0 < 2000);
+});
+
+test('yt-dlp starts quickly (onedir build, not the slow onefile)', { skip: !existsSync(YTDLP) && 'run scripts/setup.sh first' }, async () => {
+  const t0 = Date.now();
+  await runYtDlp(['--version']);
+  assert.ok(Date.now() - t0 < 5000, `yt-dlp took ${Date.now() - t0}ms to start`);
 });
