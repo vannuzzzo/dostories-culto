@@ -17,7 +17,7 @@
 - Font: Cossette Titre (Google Fonts), used both in preview and export.
 - Ordinal suffix follows the day: 1ST 2ND 3RD, 4–20 TH, 21ST 22ND 23RD, 24–30 TH, 31ST.
 - Default bottom row: `NOT AN ORDINARY CULTO` (4 words, editable).
-- Server listens on `http://localhost:4321`, localhost only.
+- Server listens on `http://localhost:4747`, localhost only.
 - No terminal for daily use: `Avvia Culto.command` double-click starts server + opens browser.
 - Git: private repo; `.gitignore` excludes `node_modules/`, `bin/`, `cache/`, `*.mp4`, `*.mov`, `*.mp3`, `*.m4a`.
 
@@ -106,8 +106,8 @@ Audio when present: input `-ss <start> -i <audio>`, `-map 2:a -af apad -shortest
   - `test('scales to 1080x1920@30 and keeps bg length with short song')`: render with audio → parse `ffmpeg -i out.mp4` stderr: contains `1080x1920`, `30 fps`, `Audio: aac`, `Duration: 00:00:03`.
   - `test('no audio')`: render without audio → stderr has no `Audio:`.
 - [ ] **Step 3:** `npm test` → FAIL.
-- [ ] **Step 4:** Implement `lib/ffmpeg.js`, then `server.js` (express static `public/`, `/lib/dates.js`, multer to tmp, `/render`), bind `127.0.0.1:4321`.
-- [ ] **Step 5:** `npm test` → PASS. Manual: `curl -F bg=@bg.mp4 -F overlay=@overlay.png -F name=x localhost:4321/render -o x.mp4` plays.
+- [ ] **Step 4:** Implement `lib/ffmpeg.js`, then `server.js` (express static `public/`, `/lib/dates.js`, multer to tmp, `/render`), bind `127.0.0.1:4747`.
+- [ ] **Step 5:** `npm test` → PASS. Manual: `curl -F bg=@bg.mp4 -F overlay=@overlay.png -F name=x localhost:4747/render -o x.mp4` plays.
 - [ ] **Step 6:** Commit `feat: ffmpeg render endpoint`.
 
 ### Task 3: Music — yt-dlp search/download + upload
@@ -124,7 +124,7 @@ Audio when present: input `-ss <start> -i <audio>`, `-map 2:a -af apad -shortest
 
 - [ ] **Step 1: Failing tests**: `parseSearch` on two fixture lines returns 2 items with exact titles/urls; `searchArgs('belo','sc')[2] === 'scsearch10:belo'`; `runYtDlp` with a bogus binary path / bad args rejects (point `YTDLP` override param: `runYtDlp(args, bin = YTDLP)`, test with `bin='/usr/bin/false'`).
 - [ ] **Step 2:** `npm test` → FAIL. **Step 3:** implement. **Step 4:** `npm test` → PASS.
-- [ ] **Step 5:** Run `scripts/setup.sh`; manual: `curl 'localhost:4321/music/search?q=dig%20in%2097&source=yt'` returns results; download one, `GET /music/file/<id>` plays.
+- [ ] **Step 5:** Run `scripts/setup.sh`; manual: `curl 'localhost:4747/music/search?q=dig%20in%2097&source=yt'` returns results; download one, `GET /music/file/<id>` plays.
 - [ ] **Step 6:** Commit `feat: music search/download`.
 
 ### Task 4: Page — form, live preview, music panel, export
@@ -155,7 +155,7 @@ Page behaviour:
 
 **Files:** Create `Avvia Culto.command`, `README.md`
 
-- [ ] **Step 1:** `Avvia Culto.command`: `cd "$(dirname "$0")"`; if `node_modules` or `bin/yt-dlp` missing run `scripts/setup.sh`; start `node server.js &`; wait until port answers (`curl -s localhost:4321 >/dev/null` loop, max 10s); `open http://localhost:4321`; `wait`. If the port is already in use, just `open` the URL. `chmod +x`.
+- [ ] **Step 1:** `Avvia Culto.command`: `cd "$(dirname "$0")"`; if `node_modules` or `bin/yt-dlp` missing run `scripts/setup.sh`; start `node server.js &`; wait until port answers (`curl -s localhost:4747 >/dev/null` loop, max 10s); `open http://localhost:4747`; `wait`. If the port is already in use, just `open` the URL. `chmod +x`.
 - [ ] **Step 2:** Manual: double-click in Finder → browser opens on the tool; closing the Terminal window stops the server.
 - [ ] **Step 3:** README (Italian, short): first install (one-time), daily use, how to update yt-dlp (`bin/yt-dlp -U`), copyright note on downloaded songs.
 - [ ] **Step 4:** Commit `feat: launcher + readme`.
