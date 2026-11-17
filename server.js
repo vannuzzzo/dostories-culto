@@ -4,7 +4,9 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { rm, mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 import { renderArgs, runFfmpeg, probeDuration } from './lib/ffmpeg.js';
+import { searchArgs, parseSearch, downloadArgs, runYtDlp, audioId } from './lib/music.js';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 export const CACHE = join(ROOT, 'cache');
@@ -15,6 +17,33 @@ const upload = multer({ dest: join(tmpdir(), 'culto-uploads') });
 
 app.use(express.static(join(ROOT, 'public')));
 app.get('/lib/dates.js', (req, res) => res.sendFile(join(ROOT, 'lib/dates.js')));
+
+app.get('/music/search', async (req, res) => {
+  try {
+    const q = String(req.query.q ?? '').trim();
+    if (!q) return res.json([]);
+    res.json(parseSearch(await runYtDlp(searchArgs(q, req.query.source))));
+  } catch (e) {
+    res.status(500).json({ error: `Ricerca fallita: ${e.message}` });
+  }
+});
+
+app.post('/music/download', express.json(), async (req, res) => {
+  try {
+    const url = String(req.body?.url ?? '');
+    if (!/^https:\/\//.test(url)) throw new Error('Link non valido');
+    const id = audioId(url);
+    if (!existsSync(join(CACHE, `${id}.mp3`))) await runYtDlp(downloadArgs(url, join(CACHE, id)));
+    res.json({ audioId: id });
+  } catch (e) {
+    res.status(500).json({ error: `Download fallito: ${e.message}` });
+  }
+});
+
+app.get('/music/file/:id', (req, res) => {
+  if (!/^[a-f0-9]{40}$/.test(req.params.id)) return res.sendStatus(400);
+  res.sendFile(join(CACHE, `${req.params.id}.mp3`));
+});
 
 app.post('/render', upload.fields([{ name: 'bg' }, { name: 'overlay' }, { name: 'audio' }]), async (req, res) => {
   const files = Object.values(req.files ?? {}).flat();
