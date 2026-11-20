@@ -35,7 +35,7 @@ export async function loadFont(text = 'A') {
 }
 
 let sx = 1;
-let size = 1; // text size of the block being drawn (its own slider); every cap below is multiplied by it
+let size = 1; // size slider for the big texts being drawn; small texts reset it to 1
 const setFont = (ctx, cap, scaleX = 1) => { sx = scaleX; ctx.font = `${LAYOUT.weight} ${(cap * size) / capRatio}px ${LAYOUT.font}`; };
 // Ink box of s (scaled): width and offset of the ink's left edge from the pen position.
 function ink(ctx, s) {
@@ -92,15 +92,15 @@ export function recolor(px, mode) {
 export function drawOverlay(ctx, f) {
   const L = LAYOUT;
   ctx.clearRect(0, 0, 1080, 1920);
-  size = f.topSize ?? 1; // date / venue block
   ctx.fillStyle = L.color;
   ctx.textBaseline = 'alphabetic';
 
   const U = L.lineup;
-  // Vertical distances from an anchor scale with the text size, so rows never collide.
-  const at = (anchor, y) => anchor - (anchor - y) * size;
-  const yInfo = f.showVenue ? L.info.baseline : L.compact.info; // top block grows upward from weekday/date
-  const y1 = at(yInfo, f.showVenue ? L.line1.baseline : L.compact.line1);
+  const T = f.topSize ?? 1, D = f.djSize ?? 1; // only the big texts scale; small rows keep their size
+  // Venue grows upward from its baseline, line 1 sits above it at a line spacing that scales too.
+  const yInfo = f.showVenue ? L.info.baseline : L.compact.info;
+  const y1 = f.showVenue ? L.line2.baseline - (L.line2.baseline - L.line1.baseline) * T : L.compact.line1;
+  size = T;
 
   // Line 1: "NOV. 19" + superscript, right-aligned as a block.
   const main1 = `${f.month} ${f.day}`.trim();
@@ -115,39 +115,39 @@ export function drawOverlay(ctx, f) {
   }
 
   // Weekday / date.
+  size = 1;
   setFont(ctx, L.info.cap, L.info.scaleX);
   text(ctx, f.weekday, L.info.left, yInfo);
   text(ctx, f.date, L.info.right - ink(ctx, f.date).w, yInfo);
 
   if (f.lineup) {
-    size = f.djSize ?? 1;
     // Label, names (left-aligned, one per row), then from/till row.
     const W = L.info.right - L.info.left;
     const names = f.names.filter(Boolean);
     // More rows than maxLines: shrink the whole block so it never reaches the bottom row.
     const k = Math.min(1, U.names.maxLines / Math.max(1, names.length));
     setFont(ctx, U.label.cap, U.label.scaleX);
-    const top = U.names.baseline - U.names.cap; // the line-up block grows downward from here
-    const yLabel = at(top, U.label.baseline);
-    if (f.label) text(ctx, f.label, L.info.left, yLabel);
-    // Top of the first name stays put; line spacing follows the text size.
-    let y = top + U.names.cap * k * size;
+    if (f.label) text(ctx, f.label, L.info.left, U.label.baseline);
+    // Top of the first name stays put; names and their line spacing follow the DJ slider.
+    size = D;
+    let y = U.names.baseline - U.names.cap + U.names.cap * k * D;
     names.forEach((n, i) => {
-      if (i) y += U.names.step * k * size;
+      if (i) y += U.names.step * k * D;
       fit(ctx, n, { cap: U.names.cap * k, scaleX: U.names.scaleX }, W);
       text(ctx, n, L.info.left, y);
     });
-    y = (names.length ? y : yLabel) + U.times.gap * size;
+    y = (names.length ? y : U.label.baseline) + U.times.gap;
+    size = 1;
     setFont(ctx, U.times.cap, U.times.scaleX);
     if (f.from) text(ctx, f.from, L.info.left, y);
     if (f.till) text(ctx, f.till, L.info.right - ink(ctx, f.till).w, y);
   }
 
   if (f.showVenue) {
-    size = f.topSize ?? 1;
+    size = T;
     // Line 2: venue.
     fit(ctx, f.venue, L.line2, L.line2.right - L.line2.minLeft);
-    text(ctx, f.venue, L.line2.right - ink(ctx, f.venue).w, at(yInfo, L.line2.baseline));
+    text(ctx, f.venue, L.line2.right - ink(ctx, f.venue).w, L.line2.baseline);
   }
 
   const imgs = f.logos ?? [];
