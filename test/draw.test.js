@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { layoutLogos, LAYOUT } from '../public/draw.js';
+import { layoutLogos, recolor, LAYOUT } from '../public/draw.js';
 
 const row = { ...LAYOUT.logos, left: 195, right: 894, height: 120, gap: 40, bottom: 1590 };
 const r = (rects) => rects.map((o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, Math.round(v * 10) / 10])));
@@ -31,4 +31,19 @@ test('two logos that do not fit: whole row shrinks, spread edge to edge, vertica
 test('three small logos keep full height and stay inside margins', () => {
   const rects = layoutLogos([{ w: 100, h: 100 }, { w: 50, h: 100 }, { w: 100, h: 100 }], row);
   assert.ok(rects.every((o) => o.h === 120 && o.x >= 195 && o.x + o.w <= 894.001));
+});
+
+test('recolor: bw thresholds each pixel to pure black or white, keeps alpha', () => {
+  const px = new Uint8ClampedArray([250, 240, 230, 255, 20, 30, 40, 128, 200, 30, 30, 0]);
+  recolor(px, 'bw');
+  // light → white, dark → black; red (luma ~80) → black; alpha untouched
+  assert.deepEqual([...px], [255, 255, 255, 255, 0, 0, 0, 128, 0, 0, 0, 0]);
+});
+
+test('recolor: white / black make a solid silhouette', () => {
+  const a = new Uint8ClampedArray([10, 200, 90, 77]);
+  recolor(a, 'white');
+  assert.deepEqual([...a], [255, 255, 255, 77]);
+  recolor(a, 'black');
+  assert.deepEqual([...a], [0, 0, 0, 77]);
 });

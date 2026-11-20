@@ -1,5 +1,5 @@
 import { dateFields, slug } from '/lib/dates.js';
-import { drawOverlay, loadFont } from './draw.js';
+import { drawOverlay, loadFont, recolor } from './draw.js';
 import { cssFilter } from '/lib/color.js';
 
 const $ = (id) => document.getElementById(id);
@@ -18,8 +18,21 @@ function fields() {
   const v = Object.fromEntries(fieldIds.map((id) => [id, $(id).value.trim().toUpperCase()]));
   return { ...v, bottom: v.bottom.split(/\s+/), names: v.names.split('\n').map((n) => n.trim()), lineup: $('lineup').checked, showVenue: $('showVenue').checked };
 }
-let logos = []; // [{ name, img }] in display order
-const redraw = () => drawOverlay(ctx, { ...fields(), logos: logos.map((l) => l.img) });
+let logos = []; // [{ name, img, cache: { mode: canvas } }] in display order
+function tinted(img, mode) {
+  const c = Object.assign(document.createElement('canvas'), { width: img.naturalWidth, height: img.naturalHeight });
+  const cx = c.getContext('2d');
+  cx.drawImage(img, 0, 0);
+  const data = cx.getImageData(0, 0, c.width, c.height);
+  recolor(data.data, mode);
+  cx.putImageData(data, 0, 0);
+  return c;
+}
+const logoSources = () => {
+  const mode = $('logoColor').value;
+  return logos.map((l) => (mode === 'orig' ? l.img : (l.cache[mode] ??= tinted(l.img, mode))));
+};
+const redraw = () => drawOverlay(ctx, { ...fields(), logos: logoSources(), logoHeight: +$('logoSize').value });
 
 // --- Date ---
 function applyDate() {
@@ -59,7 +72,7 @@ async function addLogos(files) {
     const img = new Image();
     img.src = URL.createObjectURL(file);
     try { await img.decode(); } catch { status(`${file.name}: immagine non leggibile`, true); continue; }
-    logos.push({ name: file.name, img });
+    logos.push({ name: file.name, img, cache: {} });
   }
   renderLogos();
 }
@@ -76,6 +89,8 @@ function renderLogos() {
   }));
   redraw();
 }
+$('logoSize').addEventListener('input', () => { $('logoSizeLabel').textContent = `${$('logoSize').value} px`; redraw(); });
+$('logoColor').addEventListener('change', redraw);
 $('logoFile').addEventListener('change', (e) => { addLogos([...e.target.files]); e.target.value = ''; });
 $('logoDrop').addEventListener('drop', (e) => { e.preventDefault(); addLogos([...e.dataTransfer.files]); });
 

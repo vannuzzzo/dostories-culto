@@ -77,6 +77,15 @@ export function layoutLogos(sizes, row) {
   return widths.map((w) => { const o = { x, y, w: w * k, h }; x += w * k + gap; return o; });
 }
 
+// In-place on RGBA pixels. 'bw' = two colors by brightness (not grayscale), 'white'/'black' = solid silhouette.
+export function recolor(px, mode) {
+  for (let i = 0; i < px.length; i += 4) {
+    const v = mode === 'white' ? 255 : mode === 'black' ? 0
+      : 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2] >= 128 ? 255 : 0;
+    px[i] = px[i + 1] = px[i + 2] = v;
+  }
+}
+
 export function drawOverlay(ctx, f) {
   const L = LAYOUT;
   ctx.clearRect(0, 0, 1080, 1920);
@@ -131,7 +140,8 @@ export function drawOverlay(ctx, f) {
   }
 
   const imgs = f.logos ?? [];
-  layoutLogos(imgs.map((i) => ({ w: i.naturalWidth, h: i.naturalHeight })), L.logos)
+  // Sources are <img> (original) or <canvas> (recolored).
+  layoutLogos(imgs.map((i) => ({ w: i.naturalWidth || i.width, h: i.naturalHeight || i.height })), { ...L.logos, height: f.logoHeight ?? L.logos.height })
     .forEach((o, i) => ctx.drawImage(imgs[i], o.x, o.y, o.w, o.h));
 
   // Bottom row: words spread edge to edge.

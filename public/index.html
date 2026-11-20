@@ -99,6 +99,17 @@ LEONE</textarea></label>
         <input type="file" id="logoFile" accept="image/png" multiple hidden>
       </label>
       <ul id="logoList"></ul>
+      <label><span>Grandezza: <span id="logoSizeLabel">120 px</span></span>
+        <input type="range" id="logoSize" min="40" max="240" step="5" value="120">
+      </label>
+      <label>Colore
+        <select id="logoColor">
+          <option value="orig">Originale</option>
+          <option value="bw">Bianco e nero (due colori)</option>
+          <option value="white">Tutto bianco</option>
+          <option value="black">Tutto nero</option>
+        </select>
+      </label>
     </section>
 
     <section>
