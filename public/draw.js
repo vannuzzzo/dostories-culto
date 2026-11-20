@@ -80,8 +80,9 @@ export function layoutLogos(sizes, row) {
 // In-place on RGBA pixels. 'bw' = two colors by brightness (not grayscale), 'white'/'black' = solid silhouette.
 export function recolor(px, mode) {
   for (let i = 0; i < px.length; i += 4) {
-    const v = mode === 'white' ? 255 : mode === 'black' ? 0
-      : 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2] >= 128 ? 255 : 0;
+    const light = mode.endsWith('Text') || mode === 'text' ? 0xde : 255; // 0xDE = #DEDEDE, the text color
+    const v = mode === 'white' || mode === 'text' ? light : mode === 'black' ? 0
+      : 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2] >= 128 ? light : 0;
     px[i] = px[i + 1] = px[i + 2] = v;
   }
 }

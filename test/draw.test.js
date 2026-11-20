@@ -47,3 +47,11 @@ test('recolor: white / black make a solid silhouette', () => {
   recolor(a, 'black');
   assert.deepEqual([...a], [0, 0, 0, 77]);
 });
+
+test('recolor: #DEDEDE variants use the text color instead of pure white', () => {
+  const a = new Uint8ClampedArray([250, 240, 230, 255, 20, 30, 40, 255]);
+  recolor(a, 'bwText');
+  assert.deepEqual([...a], [222, 222, 222, 255, 0, 0, 0, 255]);
+  recolor(a, 'text');
+  assert.deepEqual([...a], [222, 222, 222, 255, 222, 222, 222, 255]);
+});
