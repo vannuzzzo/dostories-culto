@@ -16,9 +16,10 @@ const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(
 
 function fields() {
   const v = Object.fromEntries(fieldIds.map((id) => [id, $(id).value.trim().toUpperCase()]));
-  return { ...v, bottom: v.bottom.split(/\s+/), names: v.names.split('\n').map((n) => n.trim()), lineup: $('lineup').checked };
+  return { ...v, bottom: v.bottom.split(/\s+/), names: v.names.split('\n').map((n) => n.trim()), lineup: $('lineup').checked, showVenue: $('showVenue').checked };
 }
-const redraw = () => drawOverlay(ctx, fields());
+let logos = []; // [{ name, img }] in display order
+const redraw = () => drawOverlay(ctx, { ...fields(), logos: logos.map((l) => l.img) });
 
 // --- Date ---
 function applyDate() {
@@ -32,9 +33,9 @@ $('pick').addEventListener('change', applyDate);
 fieldIds.forEach((id) => $(id).addEventListener('input', redraw));
 $('lineup').addEventListener('change', () => {
   $('lineupFields').hidden = !$('lineup').checked;
-  $('venueField').hidden = $('lineup').checked;
   redraw();
 });
+$('showVenue').addEventListener('change', () => { $('venueField').hidden = !$('showVenue').checked; redraw(); });
 
 // --- Background ---
 function setBg(file) {
@@ -50,6 +51,33 @@ $('bgFile').addEventListener('change', (e) => setBg(e.target.files[0]));
 // A file dropped anywhere else would make the browser open it and lose all edits.
 ['dragover', 'drop'].forEach((ev) => window.addEventListener(ev, (e) => e.preventDefault()));
 $('bgDrop').addEventListener('drop', (e) => { e.preventDefault(); setBg(e.dataTransfer.files[0]); });
+
+// --- Partner logos ---
+async function addLogos(files) {
+  for (const file of files) {
+    if (file.type !== 'image/png') { status(`${file.name}: serve un PNG`, true); continue; }
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    try { await img.decode(); } catch { status(`${file.name}: immagine non leggibile`, true); continue; }
+    logos.push({ name: file.name, img });
+  }
+  renderLogos();
+}
+function renderLogos() {
+  $('logoList').replaceChildren(...logos.map((l, i) => {
+    const li = document.createElement('li');
+    const name = document.createElement('span');
+    name.textContent = l.name;
+    const rm = Object.assign(document.createElement('button'), { textContent: '✕', title: 'Rimuovi' });
+    rm.setAttribute('aria-label', `Rimuovi ${l.name}`);
+    rm.addEventListener('click', () => { URL.revokeObjectURL(l.img.src); logos.splice(i, 1); renderLogos(); });
+    li.append(name, rm);
+    return li;
+  }));
+  redraw();
+}
+$('logoFile').addEventListener('change', (e) => { addLogos([...e.target.files]); e.target.value = ''; });
+$('logoDrop').addEventListener('drop', (e) => { e.preventDefault(); addLogos([...e.dataTransfer.files]); });
 
 // --- Background color (Hue/Saturation). Same math as the export, see lib/color.js ---
 function applyColor() {
@@ -151,7 +179,7 @@ $('export').addEventListener('click', async () => {
     await loadFont(Object.values(fields()).flat().join('').replace(/\s/g, ''));
     redraw();
     const png = await new Promise((r) => canvas.toBlob(r, 'image/png'));
-    const who = $('lineup').checked ? $('names').value : $('venue').value;
+    const who = $('showVenue').checked ? $('venue').value : $('lineup').checked ? $('names').value : '';
     const name = [$('pick').value, slug(who)].filter(Boolean).join('-') || 'story';
     const fd = new FormData();
     fd.append('bg', bgFile);

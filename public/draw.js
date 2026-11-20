@@ -10,9 +10,12 @@ export const LAYOUT = {
   line2: { baseline: 622, cap: 150, right: 896, scaleX: 0.956, minLeft: 192 }, // venue
   info: { baseline: 666, cap: 30, left: 192, right: 894, scaleX: 0.94 },     // weekday (left) + date (right)
   bottom: { baseline: 1670, cap: 30, left: 195, right: 894, scaleX: 0.93 },  // 4 words, spread edge to edge
-  // Line-up mode: no venue, date block moves up, DJ names in the middle.
+  // Partner logos (transparent PNGs), row just above the bottom text.
+  logos: { bottom: 1590, height: 120, gap: 40, left: 195, right: 894 },
+  // Venue hidden: date block moves up (baselines of "NOV. 11" and weekday/date).
+  compact: { line1: 402, info: 445 },
+  // Line-up mode: DJ names in the middle.
   lineup: {
-    line1: 402, info: 445,                                   // baselines of "NOV. 11" and weekday/date
     label: { baseline: 940, cap: 30, scaleX: 0.94 },         // "DJ"
     names: { baseline: 1102, cap: 150, step: 162, scaleX: 0.956, maxLines: 3 }, // one name line per row
     times: { gap: 43, cap: 30, scaleX: 0.94 },               // "FROM 22:00" / "TILL END", gap below last name
@@ -58,6 +61,22 @@ function fit(ctx, s, row, maxW) {
   return (row.cap * maxW) / w;
 }
 
+// sizes = [{w, h}] natural image sizes → [{x, y, w, h}] in story px.
+// 1 logo: centered. More: spread edge to edge like the bottom words. Row shrinks if it doesn't fit.
+export function layoutLogos(sizes, row) {
+  if (!sizes.length) return [];
+  const W = row.right - row.left;
+  const widths = sizes.map((s) => (s.w * row.height) / s.h);
+  // The minimum gap never shrinks, only the logos do.
+  const k = Math.min(1, (W - row.gap * (sizes.length - 1)) / widths.reduce((a, b) => a + b, 0));
+  const h = row.height * k;
+  const y = row.bottom - row.height / 2 - h / 2;
+  if (sizes.length === 1) return [{ x: row.left + (W - widths[0] * k) / 2, y, w: widths[0] * k, h }];
+  const gap = (W - widths.reduce((a, b) => a + b * k, 0)) / (sizes.length - 1);
+  let x = row.left;
+  return widths.map((w) => { const o = { x, y, w: w * k, h }; x += w * k + gap; return o; });
+}
+
 export function drawOverlay(ctx, f) {
   const L = LAYOUT;
   ctx.clearRect(0, 0, 1080, 1920);
@@ -65,7 +84,7 @@ export function drawOverlay(ctx, f) {
   ctx.textBaseline = 'alphabetic';
 
   const U = L.lineup;
-  const y1 = f.lineup ? U.line1 : L.line1.baseline;
+  const y1 = f.showVenue ? L.line1.baseline : L.compact.line1;
 
   // Line 1: "NOV. 19" + superscript, right-aligned as a block.
   const main1 = `${f.month} ${f.day}`.trim();
@@ -80,7 +99,7 @@ export function drawOverlay(ctx, f) {
   }
 
   // Weekday / date.
-  const yInfo = f.lineup ? U.info : L.info.baseline;
+  const yInfo = f.showVenue ? L.info.baseline : L.compact.info;
   setFont(ctx, L.info.cap, L.info.scaleX);
   text(ctx, f.weekday, L.info.left, yInfo);
   text(ctx, f.date, L.info.right - ink(ctx, f.date).w, yInfo);
@@ -103,11 +122,17 @@ export function drawOverlay(ctx, f) {
     setFont(ctx, U.times.cap, U.times.scaleX);
     if (f.from) text(ctx, f.from, L.info.left, y);
     if (f.till) text(ctx, f.till, L.info.right - ink(ctx, f.till).w, y);
-  } else {
+  }
+
+  if (f.showVenue) {
     // Line 2: venue.
     fit(ctx, f.venue, L.line2, L.line2.right - L.line2.minLeft);
     text(ctx, f.venue, L.line2.right - ink(ctx, f.venue).w, L.line2.baseline);
   }
+
+  const imgs = f.logos ?? [];
+  layoutLogos(imgs.map((i) => ({ w: i.naturalWidth, h: i.naturalHeight })), L.logos)
+    .forEach((o, i) => ctx.drawImage(imgs[i], o.x, o.y, o.w, o.h));
 
   // Bottom row: words spread edge to edge.
   const B = L.bottom;
