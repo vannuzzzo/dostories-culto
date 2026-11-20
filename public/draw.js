@@ -35,7 +35,7 @@ export async function loadFont(text = 'A') {
 }
 
 let sx = 1;
-let size = 1; // global text size from the "Grandezza testi" slider; every cap below is multiplied by it
+let size = 1; // text size of the block being drawn (its own slider); every cap below is multiplied by it
 const setFont = (ctx, cap, scaleX = 1) => { sx = scaleX; ctx.font = `${LAYOUT.weight} ${(cap * size) / capRatio}px ${LAYOUT.font}`; };
 // Ink box of s (scaled): width and offset of the ink's left edge from the pen position.
 function ink(ctx, s) {
@@ -92,7 +92,7 @@ export function recolor(px, mode) {
 export function drawOverlay(ctx, f) {
   const L = LAYOUT;
   ctx.clearRect(0, 0, 1080, 1920);
-  size = f.textSize ?? 1;
+  size = f.topSize ?? 1; // date / venue block
   ctx.fillStyle = L.color;
   ctx.textBaseline = 'alphabetic';
 
@@ -120,6 +120,7 @@ export function drawOverlay(ctx, f) {
   text(ctx, f.date, L.info.right - ink(ctx, f.date).w, yInfo);
 
   if (f.lineup) {
+    size = f.djSize ?? 1;
     // Label, names (left-aligned, one per row), then from/till row.
     const W = L.info.right - L.info.left;
     const names = f.names.filter(Boolean);
@@ -143,6 +144,7 @@ export function drawOverlay(ctx, f) {
   }
 
   if (f.showVenue) {
+    size = f.topSize ?? 1;
     // Line 2: venue.
     fit(ctx, f.venue, L.line2, L.line2.right - L.line2.minLeft);
     text(ctx, f.venue, L.line2.right - ink(ctx, f.venue).w, at(yInfo, L.line2.baseline));
@@ -154,6 +156,7 @@ export function drawOverlay(ctx, f) {
     .forEach((o, i) => ctx.drawImage(imgs[i], o.x, o.y, o.w, o.h));
 
   // Bottom row: words spread edge to edge.
+  size = 1;
   const B = L.bottom;
   const words = f.bottom.filter(Boolean);
   fit(ctx, words.join(''), B, B.right - B.left - 20 * (words.length - 1)); // big sizes: keep at least 20px between words

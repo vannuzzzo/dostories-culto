@@ -69,18 +69,21 @@
     <section>
       <h2>Testi</h2>
       <label>Data evento <input type="date" id="pick"></label>
+      <label><span>Grandezza data e locale: <span id="topSizeLabel">100%</span></span>
+        <input type="range" id="topSize" min="50" max="150" step="1" value="100">
+      </label>
       <div class="row" style="--n:3">
         <label>Mese <input id="month"></label>
         <label>Giorno <input id="day"></label>
         <label>Apice <input id="sup"></label>
       </div>
-      <label><span>Grandezza testi: <span id="textSizeLabel">100%</span></span>
-        <input type="range" id="textSize" min="50" max="150" step="1" value="100">
-      </label>
       <label class="check"><input type="checkbox" id="showVenue" checked> Mostra locale</label>
       <label id="venueField">Locale <input id="venue" value="MAISON 3"></label>
       <label class="check"><input type="checkbox" id="lineup"> Line up DJ</label>
       <div id="lineupFields" hidden class="row" style="--n:1">
+        <label><span>Grandezza DJ: <span id="djSizeLabel">100%</span></span>
+          <input type="range" id="djSize" min="50" max="150" step="1" value="100">
+        </label>
         <label>Etichetta <input id="label" value="DJ"></label>
         <label>Nomi (ogni riga qui = una riga nella story) <textarea id="names" rows="3">GABRIELE
 LEONE</textarea></label>
