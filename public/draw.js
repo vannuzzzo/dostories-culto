@@ -35,7 +35,8 @@ export async function loadFont(text = 'A') {
 }
 
 let sx = 1;
-const setFont = (ctx, cap, scaleX = 1) => { sx = scaleX; ctx.font = `${LAYOUT.weight} ${cap / capRatio}px ${LAYOUT.font}`; };
+let size = 1; // global text size from the "Grandezza testi" slider; every cap below is multiplied by it
+const setFont = (ctx, cap, scaleX = 1) => { sx = scaleX; ctx.font = `${LAYOUT.weight} ${(cap * size) / capRatio}px ${LAYOUT.font}`; };
 // Ink box of s (scaled): width and offset of the ink's left edge from the pen position.
 function ink(ctx, s) {
   const m = ctx.measureText(s);
@@ -77,12 +78,13 @@ export function layoutLogos(sizes, row) {
   return widths.map((w) => { const o = { x, y, w: w * k, h }; x += w * k + gap; return o; });
 }
 
-// In-place on RGBA pixels. 'bw' = two colors by brightness (not grayscale), 'white'/'black' = solid silhouette.
+// In-place on RGBA pixels. 'bw' = grayscale (saturation 0), 'bwText' = grayscale whose white is #DEDEDE,
+// 'white'/'text'/'black' = solid silhouette.
 export function recolor(px, mode) {
+  const light = mode === 'bwText' || mode === 'text' ? 0xde : 255; // 0xDE = #DEDEDE, the text color
   for (let i = 0; i < px.length; i += 4) {
-    const light = mode.endsWith('Text') || mode === 'text' ? 0xde : 255; // 0xDE = #DEDEDE, the text color
     const v = mode === 'white' || mode === 'text' ? light : mode === 'black' ? 0
-      : 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2] >= 128 ? light : 0;
+      : ((0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2]) * light) / 255;
     px[i] = px[i + 1] = px[i + 2] = v;
   }
 }
@@ -90,11 +92,15 @@ export function recolor(px, mode) {
 export function drawOverlay(ctx, f) {
   const L = LAYOUT;
   ctx.clearRect(0, 0, 1080, 1920);
+  size = f.textSize ?? 1;
   ctx.fillStyle = L.color;
   ctx.textBaseline = 'alphabetic';
 
   const U = L.lineup;
-  const y1 = f.showVenue ? L.line1.baseline : L.compact.line1;
+  // Vertical distances from an anchor scale with the text size, so rows never collide.
+  const at = (anchor, y) => anchor - (anchor - y) * size;
+  const yInfo = f.showVenue ? L.info.baseline : L.compact.info; // top block grows upward from weekday/date
+  const y1 = at(yInfo, f.showVenue ? L.line1.baseline : L.compact.line1);
 
   // Line 1: "NOV. 19" + superscript, right-aligned as a block.
   const main1 = `${f.month} ${f.day}`.trim();
@@ -105,11 +111,10 @@ export function drawOverlay(ctx, f) {
   if (f.sup) {
     const supCap = L.sup.cap * (cap1 / L.line1.cap);
     setFont(ctx, supCap, L.line1.scaleX);
-    text(ctx, f.sup, L.line1.right - ink(ctx, f.sup).w, y1 - cap1 + supCap);
+    text(ctx, f.sup, L.line1.right - ink(ctx, f.sup).w, y1 - (cap1 - supCap) * size);
   }
 
   // Weekday / date.
-  const yInfo = f.showVenue ? L.info.baseline : L.compact.info;
   setFont(ctx, L.info.cap, L.info.scaleX);
   text(ctx, f.weekday, L.info.left, yInfo);
   text(ctx, f.date, L.info.right - ink(ctx, f.date).w, yInfo);
@@ -121,14 +126,17 @@ export function drawOverlay(ctx, f) {
     // More rows than maxLines: shrink the whole block so it never reaches the bottom row.
     const k = Math.min(1, U.names.maxLines / Math.max(1, names.length));
     setFont(ctx, U.label.cap, U.label.scaleX);
-    if (f.label) text(ctx, f.label, L.info.left, U.label.baseline);
-    let y = U.names.baseline - U.names.cap * (1 - k);
+    const top = U.names.baseline - U.names.cap; // the line-up block grows downward from here
+    const yLabel = at(top, U.label.baseline);
+    if (f.label) text(ctx, f.label, L.info.left, yLabel);
+    // Top of the first name stays put; line spacing follows the text size.
+    let y = top + U.names.cap * k * size;
     names.forEach((n, i) => {
-      if (i) y += U.names.step * k;
+      if (i) y += U.names.step * k * size;
       fit(ctx, n, { cap: U.names.cap * k, scaleX: U.names.scaleX }, W);
       text(ctx, n, L.info.left, y);
     });
-    y = (names.length ? y : U.label.baseline) + U.times.gap;
+    y = (names.length ? y : yLabel) + U.times.gap * size;
     setFont(ctx, U.times.cap, U.times.scaleX);
     if (f.from) text(ctx, f.from, L.info.left, y);
     if (f.till) text(ctx, f.till, L.info.right - ink(ctx, f.till).w, y);
@@ -137,7 +145,7 @@ export function drawOverlay(ctx, f) {
   if (f.showVenue) {
     // Line 2: venue.
     fit(ctx, f.venue, L.line2, L.line2.right - L.line2.minLeft);
-    text(ctx, f.venue, L.line2.right - ink(ctx, f.venue).w, L.line2.baseline);
+    text(ctx, f.venue, L.line2.right - ink(ctx, f.venue).w, at(yInfo, L.line2.baseline));
   }
 
   const imgs = f.logos ?? [];
@@ -147,8 +155,8 @@ export function drawOverlay(ctx, f) {
 
   // Bottom row: words spread edge to edge.
   const B = L.bottom;
-  setFont(ctx, B.cap, B.scaleX);
   const words = f.bottom.filter(Boolean);
+  fit(ctx, words.join(''), B, B.right - B.left - 20 * (words.length - 1)); // big sizes: keep at least 20px between words
   if (words.length === 1) return text(ctx, words[0], 540 - ink(ctx, words[0]).w / 2, B.baseline);
   const widths = words.map((w) => ink(ctx, w).w);
   const gap = (B.right - B.left - widths.reduce((a, b) => a + b, 0)) / (words.length - 1);

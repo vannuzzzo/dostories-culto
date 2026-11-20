@@ -33,11 +33,11 @@ test('three small logos keep full height and stay inside margins', () => {
   assert.ok(rects.every((o) => o.h === 120 && o.x >= 195 && o.x + o.w <= 894.001));
 });
 
-test('recolor: bw thresholds each pixel to pure black or white, keeps alpha', () => {
-  const px = new Uint8ClampedArray([250, 240, 230, 255, 20, 30, 40, 128, 200, 30, 30, 0]);
+test('recolor: bw is grayscale (luma), keeps alpha', () => {
+  const px = new Uint8ClampedArray([255, 255, 255, 255, 0, 0, 0, 128, 200, 30, 30, 0]);
   recolor(px, 'bw');
-  // light → white, dark → black; red (luma ~80) → black; alpha untouched
-  assert.deepEqual([...px], [255, 255, 255, 255, 0, 0, 0, 128, 0, 0, 0, 0]);
+  // red (200,30,30) → luma ~66 gray; alpha untouched
+  assert.deepEqual([...px], [255, 255, 255, 255, 0, 0, 0, 128, 66, 66, 66, 0]);
 });
 
 test('recolor: white / black make a solid silhouette', () => {
@@ -49,7 +49,7 @@ test('recolor: white / black make a solid silhouette', () => {
 });
 
 test('recolor: #DEDEDE variants use the text color instead of pure white', () => {
-  const a = new Uint8ClampedArray([250, 240, 230, 255, 20, 30, 40, 255]);
+  const a = new Uint8ClampedArray([255, 255, 255, 255, 0, 0, 0, 255]);
   recolor(a, 'bwText');
   assert.deepEqual([...a], [222, 222, 222, 255, 0, 0, 0, 255]);
   recolor(a, 'text');

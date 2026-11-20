@@ -32,7 +32,7 @@ const logoSources = () => {
   const mode = $('logoColor').value;
   return logos.map((l) => (mode === 'orig' ? l.img : (l.cache[mode] ??= tinted(l.img, mode))));
 };
-const redraw = () => drawOverlay(ctx, { ...fields(), logos: logoSources(), logoHeight: +$('logoSize').value });
+const redraw = () => drawOverlay(ctx, { ...fields(), logos: logoSources(), logoHeight: +$('logoSize').value, textSize: $('textSize').value / 100 });
 
 // --- Date ---
 function applyDate() {
@@ -91,6 +91,7 @@ function renderLogos() {
 }
 $('logoSize').addEventListener('input', () => { $('logoSizeLabel').textContent = `${$('logoSize').value} px`; redraw(); });
 $('logoColor').addEventListener('change', redraw);
+$('textSize').addEventListener('input', () => { $('textSizeLabel').textContent = `${$('textSize').value}%`; redraw(); });
 $('logoFile').addEventListener('change', (e) => { addLogos([...e.target.files]); e.target.value = ''; });
 $('logoDrop').addEventListener('drop', (e) => { e.preventDefault(); addLogos([...e.dataTransfer.files]); });
 

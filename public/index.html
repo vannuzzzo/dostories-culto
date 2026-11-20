@@ -74,6 +74,9 @@
         <label>Giorno <input id="day"></label>
         <label>Apice <input id="sup"></label>
       </div>
+      <label><span>Grandezza testi: <span id="textSizeLabel">100%</span></span>
+        <input type="range" id="textSize" min="50" max="150" step="1" value="100">
+      </label>
       <label class="check"><input type="checkbox" id="showVenue" checked> Mostra locale</label>
       <label id="venueField">Locale <input id="venue" value="MAISON 3"></label>
       <label class="check"><input type="checkbox" id="lineup"> Line up DJ</label>
@@ -105,8 +108,8 @@ LEONE</textarea></label>
       <label>Colore
         <select id="logoColor">
           <option value="orig">Originale</option>
-          <option value="bw">Bianco e nero (due colori)</option>
-          <option value="bwText">#DEDEDE e nero (due colori)</option>
+          <option value="bw">Bianco e nero</option>
+          <option value="bwText">Bianco e nero (bianco = #DEDEDE)</option>
           <option value="white">Tutto bianco</option>
           <option value="text">Tutto #DEDEDE</option>
           <option value="black">Tutto nero</option>
