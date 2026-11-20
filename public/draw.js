@@ -10,6 +10,13 @@ export const LAYOUT = {
   line2: { baseline: 622, cap: 150, right: 896, scaleX: 0.956, minLeft: 192 }, // venue
   info: { baseline: 666, cap: 30, left: 192, right: 894, scaleX: 0.94 },     // weekday (left) + date (right)
   bottom: { baseline: 1670, cap: 30, left: 195, right: 894, scaleX: 0.93 },  // 4 words, spread edge to edge
+  // Line-up mode: no venue, date block moves up, DJ names in the middle.
+  lineup: {
+    line1: 402, info: 445,                                   // baselines of "NOV. 11" and weekday/date
+    label: { baseline: 940, cap: 30, scaleX: 0.94 },         // "DJ"
+    names: { baseline: 1102, cap: 150, step: 162, scaleX: 0.956, maxLines: 3 }, // one name line per row
+    times: { gap: 43, cap: 30, scaleX: 0.94 },               // "FROM 22:00" / "TILL END", gap below last name
+  },
 };
 
 let capRatio = 0.7; // cap height / font size, measured once the font is loaded
@@ -57,26 +64,50 @@ export function drawOverlay(ctx, f) {
   ctx.fillStyle = L.color;
   ctx.textBaseline = 'alphabetic';
 
+  const U = L.lineup;
+  const y1 = f.lineup ? U.line1 : L.line1.baseline;
+
   // Line 1: "NOV. 19" + superscript, right-aligned as a block.
   const main1 = `${f.month} ${f.day}`.trim();
   setFont(ctx, L.sup.cap, L.line1.scaleX);
   const supW = f.sup ? ink(ctx, f.sup).w + L.sup.gap : 0;
   const cap1 = fit(ctx, main1, L.line1, L.line1.right - L.line2.minLeft - supW);
-  text(ctx, main1, L.line1.right - supW - ink(ctx, main1).w, L.line1.baseline);
+  text(ctx, main1, L.line1.right - supW - ink(ctx, main1).w, y1);
   if (f.sup) {
     const supCap = L.sup.cap * (cap1 / L.line1.cap);
     setFont(ctx, supCap, L.line1.scaleX);
-    text(ctx, f.sup, L.line1.right - ink(ctx, f.sup).w, L.line1.baseline - cap1 + supCap);
+    text(ctx, f.sup, L.line1.right - ink(ctx, f.sup).w, y1 - cap1 + supCap);
   }
 
-  // Line 2: venue.
-  fit(ctx, f.venue, L.line2, L.line2.right - L.line2.minLeft);
-  text(ctx, f.venue, L.line2.right - ink(ctx, f.venue).w, L.line2.baseline);
-
   // Weekday / date.
+  const yInfo = f.lineup ? U.info : L.info.baseline;
   setFont(ctx, L.info.cap, L.info.scaleX);
-  text(ctx, f.weekday, L.info.left, L.info.baseline);
-  text(ctx, f.date, L.info.right - ink(ctx, f.date).w, L.info.baseline);
+  text(ctx, f.weekday, L.info.left, yInfo);
+  text(ctx, f.date, L.info.right - ink(ctx, f.date).w, yInfo);
+
+  if (f.lineup) {
+    // Label, names (left-aligned, one per row), then from/till row.
+    const W = L.info.right - L.info.left;
+    const names = f.names.filter(Boolean);
+    // More rows than maxLines: shrink the whole block so it never reaches the bottom row.
+    const k = Math.min(1, U.names.maxLines / Math.max(1, names.length));
+    setFont(ctx, U.label.cap, U.label.scaleX);
+    if (f.label) text(ctx, f.label, L.info.left, U.label.baseline);
+    let y = U.names.baseline - U.names.cap * (1 - k);
+    names.forEach((n, i) => {
+      if (i) y += U.names.step * k;
+      fit(ctx, n, { cap: U.names.cap * k, scaleX: U.names.scaleX }, W);
+      text(ctx, n, L.info.left, y);
+    });
+    y = (names.length ? y : U.label.baseline) + U.times.gap;
+    setFont(ctx, U.times.cap, U.times.scaleX);
+    if (f.from) text(ctx, f.from, L.info.left, y);
+    if (f.till) text(ctx, f.till, L.info.right - ink(ctx, f.till).w, y);
+  } else {
+    // Line 2: venue.
+    fit(ctx, f.venue, L.line2, L.line2.right - L.line2.minLeft);
+    text(ctx, f.venue, L.line2.right - ink(ctx, f.venue).w, L.line2.baseline);
+  }
 
   // Bottom row: words spread edge to edge.
   const B = L.bottom;

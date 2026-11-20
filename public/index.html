@@ -19,7 +19,10 @@
   h1 { font: 28px 'Cossette Titre', sans-serif; margin: 0; letter-spacing: .5px; }
   h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 0; }
   label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
-  input, select { min-width: 0; width: 100%; }
+  input, select, textarea { min-width: 0; width: 100%; }
+  textarea { font: inherit; color: var(--text); background: #0f0f11; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; resize: vertical; }
+  label.check { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 14px; cursor: pointer; }
+  label.check input { width: auto; accent-color: var(--accent); }
   input, select, button { font: inherit; color: var(--text); background: #0f0f11; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
   input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .row { display: grid; grid-template-columns: repeat(var(--n, 2), 1fr); gap: 8px; }
@@ -68,7 +71,17 @@
         <label>Giorno <input id="day"></label>
         <label>Apice <input id="sup"></label>
       </div>
-      <label>Locale <input id="venue" value="MAISON 3"></label>
+      <label class="check"><input type="checkbox" id="lineup"> Line up DJ</label>
+      <label id="venueField">Locale <input id="venue" value="MAISON 3"></label>
+      <div id="lineupFields" hidden class="row" style="--n:1">
+        <label>Etichetta <input id="label" value="DJ"></label>
+        <label>Nomi (ogni riga qui = una riga nella story) <textarea id="names" rows="3">GABRIELE
+LEONE</textarea></label>
+        <div class="row" style="--n:2">
+          <label>Inizio <input id="from" value="FROM 22:00"></label>
+          <label>Fine <input id="till" value="TILL END"></label>
+        </div>
+      </div>
       <div class="row">
         <label>Giorno settimana <input id="weekday"></label>
         <label>Data <input id="date"></label>

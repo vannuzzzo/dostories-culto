@@ -5,7 +5,7 @@ import { cssFilter } from '/lib/color.js';
 const $ = (id) => document.getElementById(id);
 const canvas = $('canvas'), ctx = canvas.getContext('2d');
 const audio = $('audio'), video = $('bgVideo');
-const fieldIds = ['month', 'day', 'sup', 'venue', 'weekday', 'date', 'bottom'];
+const fieldIds = ['month', 'day', 'sup', 'venue', 'weekday', 'date', 'bottom', 'label', 'names', 'from', 'till'];
 
 let bgFile = null;
 let music = null; // { file } | { audioId } | null
@@ -16,7 +16,7 @@ const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(
 
 function fields() {
   const v = Object.fromEntries(fieldIds.map((id) => [id, $(id).value.trim().toUpperCase()]));
-  return { ...v, bottom: v.bottom.split(/\s+/) };
+  return { ...v, bottom: v.bottom.split(/\s+/), names: v.names.split('\n').map((n) => n.trim()), lineup: $('lineup').checked };
 }
 const redraw = () => drawOverlay(ctx, fields());
 
@@ -30,6 +30,11 @@ function applyDate() {
 $('pick').valueAsDate = new Date();
 $('pick').addEventListener('change', applyDate);
 fieldIds.forEach((id) => $(id).addEventListener('input', redraw));
+$('lineup').addEventListener('change', () => {
+  $('lineupFields').hidden = !$('lineup').checked;
+  $('venueField').hidden = $('lineup').checked;
+  redraw();
+});
 
 // --- Background ---
 function setBg(file) {
@@ -143,10 +148,11 @@ $('export').addEventListener('click', async () => {
   $('export').textContent = 'Esporto…';
   status('');
   try {
-    await loadFont(Object.values(fields()).flat().join(''));
+    await loadFont(Object.values(fields()).flat().join('').replace(/\s/g, ''));
     redraw();
     const png = await new Promise((r) => canvas.toBlob(r, 'image/png'));
-    const name = [$('pick').value, slug($('venue').value)].filter(Boolean).join('-') || 'story';
+    const who = $('lineup').checked ? $('names').value : $('venue').value;
+    const name = [$('pick').value, slug(who)].filter(Boolean).join('-') || 'story';
     const fd = new FormData();
     fd.append('bg', bgFile);
     fd.append('overlay', png, 'overlay.png');
