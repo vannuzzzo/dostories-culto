@@ -16,8 +16,38 @@ const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(
 
 function fields() {
   const v = Object.fromEntries(fieldIds.map((id) => [id, $(id).value.trim().toUpperCase()]));
-  return { ...v, bottom: v.bottom.split(/\s+/), names: v.names.split('\n').map((n) => n.trim()), lineup: $('lineup').checked, showVenue: $('showVenue').checked };
+  return {
+    ...v, bottom: v.bottom.split(/\s+/), names: v.names.split('\n').map((n) => n.trim()), lineup: $('lineup').checked, showVenue: $('showVenue').checked,
+    calendar: $('calendar').checked,
+    calTitle: [$('calTitle1').value, $('calTitle2').value].map((s) => s.trim().toUpperCase()),
+    calDays: [...document.querySelectorAll('.calDay')].map((r) => ({ day: r.children[0].value.trim().toUpperCase(), event: r.children[1].value.trim().toUpperCase() })),
+    calHours: $('calHours').value.trim().toUpperCase(),
+  };
 }
+
+// --- Weekly calendar: 7 rows (Mon–Sun) of day label + event ---
+$('calDays').replaceChildren(...Array.from({ length: 7 }, (_, i) => {
+  const r = Object.assign(document.createElement('div'), { className: 'calDay' });
+  const day = Object.assign(document.createElement('input'), { ariaLabel: `Giorno ${i + 1}` });
+  const ev = Object.assign(document.createElement('input'), { placeholder: 'Evento', ariaLabel: `Evento ${i + 1}` });
+  r.append(day, ev);
+  return r;
+}));
+// Fills the day labels (and title month) from the week of the picked date; events are left untouched.
+function fillWeek(d) {
+  const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+  document.querySelectorAll('.calDay').forEach((r, i) => {
+    const f = dateFields(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i));
+    r.children[0].value = `${f.weekday} ${f.day}${f.sup}`;
+  });
+  $('calTitle1').value = d.toLocaleString('en', { month: 'long' }).toUpperCase();
+}
+$('calFields').addEventListener('input', () => redraw());
+$('calendar').addEventListener('change', () => {
+  $('calFields').hidden = !$('calendar').checked;
+  $('normalFields').hidden = $('calendar').checked;
+  redraw();
+});
 let logos = []; // [{ name, img, cache: { mode: canvas } }] in display order
 function tinted(img, mode) {
   const c = Object.assign(document.createElement('canvas'), { width: img.naturalWidth, height: img.naturalHeight });
@@ -39,6 +69,7 @@ function applyDate() {
   const [y, m, d] = $('pick').value.split('-').map(Number);
   if (!y) return;
   for (const [k, val] of Object.entries(dateFields(new Date(y, m - 1, d)))) $(k).value = val;
+  fillWeek(new Date(y, m - 1, d));
   redraw();
 }
 $('pick').valueAsDate = new Date();
@@ -192,10 +223,10 @@ $('export').addEventListener('click', async () => {
   $('export').textContent = 'Esporto…';
   status('');
   try {
-    await loadFont(Object.values(fields()).flat().join('').replace(/\s/g, ''));
+    await loadFont(JSON.stringify(fields()));
     redraw();
     const png = await new Promise((r) => canvas.toBlob(r, 'image/png'));
-    const who = $('showVenue').checked ? $('venue').value : $('lineup').checked ? $('names').value : '';
+    const who = $('calendar').checked ? 'calendario' : $('showVenue').checked ? $('venue').value : $('lineup').checked ? $('names').value : '';
     const name = [$('pick').value, slug(who)].filter(Boolean).join('-') || 'story';
     const fd = new FormData();
     fd.append('bg', bgFile);

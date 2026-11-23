@@ -20,6 +20,16 @@ export const LAYOUT = {
     names: { baseline: 1102, cap: 150, step: 162, scaleX: 0.956, maxLines: 3 }, // one name line per row
     times: { gap: 43, cap: 30, scaleX: 0.94 },               // "FROM 22:00" / "TILL END", gap below last name
   },
+  // Weekly calendar (reference 5.png): centered title, grid of day + event, two centered lines at the bottom.
+  calendar: {
+    title: { baselines: [290, 332], cap: 30, scaleX: 0.94 },
+    // Event-name baselines: rows `step` apart, block centered on `center` (2 rows → 949 and 1049).
+    grid: { left: 166, right: 913, center: 999, step: 100, perRow: 3, minGap: 30 },
+    day: { cap: 20, rise: 54, scaleX: 0.94, supGap: 2 }, // "TUESDAY 10" + "TH", baseline `rise` above the event
+    name: { cap: 50, scaleX: 0.933 },
+    foot: { baselines: [1617, 1659], cap: 30, scaleX: 0.922 },
+    logosBottom: 1555, // logos row sits just above the two bottom lines
+  },
 };
 
 let capRatio = 0.7; // cap height / font size, measured once the font is loaded
@@ -89,11 +99,69 @@ export function recolor(px, mode) {
   }
 }
 
+// Same spreading as the logos: 1 item centered, more edge to edge, row shrinks (factor k) if it doesn't fit.
+export function spreadRow(widths, left, right, minGap) {
+  const W = right - left, sum = widths.reduce((a, b) => a + b, 0);
+  const k = Math.min(1, (W - minGap * (widths.length - 1)) / sum);
+  if (widths.length === 1) return { k, xs: [left + (W - widths[0] * k) / 2] };
+  const gap = (W - sum * k) / (widths.length - 1);
+  let x = left;
+  return { k, xs: widths.map((w) => { const o = x; x += w * k + gap; return o; }) };
+}
+
+const centered = (ctx, s, y) => text(ctx, s, 540 - ink(ctx, s).w / 2, y);
+
+function drawCalendar(ctx, f) {
+  const C = LAYOUT.calendar, G = C.grid;
+  setFont(ctx, C.title.cap, C.title.scaleX);
+  f.calTitle.forEach((s, i) => s && centered(ctx, s, C.title.baselines[i]));
+
+  const entries = f.calDays.filter((d) => d.event);
+  const rows = [];
+  for (let i = 0; i < entries.length; i += G.perRow) rows.push(entries.slice(i, i + G.perRow));
+  rows.forEach((row, r) => {
+    const y = G.center - ((rows.length - 1) * G.step) / 2 + r * G.step;
+    // "TUESDAY 10TH" → main "TUESDAY 10" + superscript "TH"
+    const parts = row.map((d) => { const m = d.day.match(/^(.*\d)(ST|ND|RD|TH)$/); return m ? [m[1], m[2]] : [d.day, '']; });
+    const widthsAt = (k) => row.map((d, i) => {
+      setFont(ctx, C.day.cap * k, C.day.scaleX);
+      let w = ink(ctx, parts[i][0]).w;
+      if (parts[i][1]) { setFont(ctx, C.day.cap * k * 0.58, C.day.scaleX); w += C.day.supGap + ink(ctx, parts[i][1]).w; }
+      setFont(ctx, C.name.cap * k, C.name.scaleX);
+      return Math.max(w, ink(ctx, d.event).w);
+    });
+    const { k, xs } = spreadRow(widthsAt(1), G.left, G.right, G.minGap);
+    row.forEach((d, i) => {
+      const x = xs[i], dayCap = C.day.cap * k, yDay = y - C.day.rise * k;
+      setFont(ctx, dayCap, C.day.scaleX);
+      text(ctx, parts[i][0], x, yDay);
+      if (parts[i][1]) {
+        const xs2 = x + ink(ctx, parts[i][0]).w + C.day.supGap, supCap = dayCap * 0.58;
+        setFont(ctx, supCap, C.day.scaleX);
+        text(ctx, parts[i][1], xs2, yDay - dayCap + supCap);
+      }
+      setFont(ctx, C.name.cap * k, C.name.scaleX);
+      text(ctx, d.event, x, y);
+    });
+  });
+
+  setFont(ctx, C.foot.cap, C.foot.scaleX);
+  [f.bottom.filter(Boolean).join(' '), f.calHours].forEach((s, i) => s && centered(ctx, s, C.foot.baselines[i]));
+}
+
 export function drawOverlay(ctx, f) {
   const L = LAYOUT;
   ctx.clearRect(0, 0, 1080, 1920);
   ctx.fillStyle = L.color;
   ctx.textBaseline = 'alphabetic';
+  size = 1;
+  const drawLogos = (bottom) => {
+    const imgs = f.logos ?? [];
+    // Sources are <img> (original) or <canvas> (recolored).
+    layoutLogos(imgs.map((i) => ({ w: i.naturalWidth || i.width, h: i.naturalHeight || i.height })), { ...L.logos, bottom, height: f.logoHeight ?? L.logos.height })
+      .forEach((o, i) => ctx.drawImage(imgs[i], o.x, o.y, o.w, o.h));
+  };
+  if (f.calendar) { drawCalendar(ctx, f); drawLogos(L.calendar.logosBottom); return; }
 
   const U = L.lineup;
   const T = f.topSize ?? 1, D = f.djSize ?? 1; // only the big texts scale; small rows keep their size
@@ -150,10 +218,7 @@ export function drawOverlay(ctx, f) {
     text(ctx, f.venue, L.line2.right - ink(ctx, f.venue).w, L.line2.baseline);
   }
 
-  const imgs = f.logos ?? [];
-  // Sources are <img> (original) or <canvas> (recolored).
-  layoutLogos(imgs.map((i) => ({ w: i.naturalWidth || i.width, h: i.naturalHeight || i.height })), { ...L.logos, height: f.logoHeight ?? L.logos.height })
-    .forEach((o, i) => ctx.drawImage(imgs[i], o.x, o.y, o.w, o.h));
+  drawLogos(L.logos.bottom);
 
   // Bottom row: words spread edge to edge.
   size = 1;

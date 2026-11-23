@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { layoutLogos, recolor, LAYOUT } from '../public/draw.js';
+import { layoutLogos, recolor, spreadRow, LAYOUT } from '../public/draw.js';
 
 const row = { ...LAYOUT.logos, left: 195, right: 894, height: 120, gap: 40, bottom: 1590 };
 const r = (rects) => rects.map((o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, Math.round(v * 10) / 10])));
@@ -54,4 +54,11 @@ test('recolor: #DEDEDE variants use the text color instead of pure white', () =>
   assert.deepEqual([...a], [222, 222, 222, 255, 0, 0, 0, 255]);
   recolor(a, 'text');
   assert.deepEqual([...a], [222, 222, 222, 255, 222, 222, 222, 255]);
+});
+
+test('spreadRow (calendar): edge to edge, one item centered, too wide shrinks keeping the min gap', () => {
+  assert.deepEqual(spreadRow([100, 200, 100], 166, 913, 30), { k: 1, xs: [166, 439.5, 813] });
+  assert.deepEqual(spreadRow([100], 166, 913, 30), { k: 1, xs: [489.5] });
+  const { k, xs } = spreadRow([400, 400], 166, 913, 30);
+  assert.ok(Math.abs(xs[1] + 400 * k - 913) < 1e-9 && xs[1] - (166 + 400 * k) >= 30 - 1e-9);
 });

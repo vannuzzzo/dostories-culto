@@ -37,6 +37,8 @@
   #logoList { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
   #logoList li { display: flex; align-items: center; gap: 8px; }
   #logoList span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hint { font-size: 12px; color: var(--muted); }
+  .calDay { display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px; }
   #status { min-height: 1.4em; font-size: 12px; color: var(--muted); }
   #status.err { color: #ff6b6b; }
   .drop { border: 1px dashed var(--line); border-radius: 8px; padding: 14px; text-align: center; color: var(--muted); cursor: pointer; }
@@ -69,6 +71,17 @@
     <section>
       <h2>Testi</h2>
       <label>Data evento <input type="date" id="pick"></label>
+      <label class="check"><input type="checkbox" id="calendar"> Calendario settimanale</label>
+      <div id="calFields" hidden class="row" style="--n:1">
+        <div class="row">
+          <label>Titolo riga 1 <input id="calTitle1"></label>
+          <label>Titolo riga 2 <input id="calTitle2" value="WEEKLY PROGRAM"></label>
+        </div>
+        <span class="hint">Settimana della data scelta sopra. Evento vuoto = giorno non mostrato.</span>
+        <div id="calDays" class="row" style="--n:1"></div>
+        <label>Orario <input id="calHours" value="FROM 22:00 TILL END"></label>
+      </div>
+      <div id="normalFields" class="row" style="--n:1">
       <label><span>Grandezza data e locale: <span id="topSizeLabel">100%</span></span>
         <input type="range" id="topSize" min="50" max="150" step="1" value="100">
       </label>
@@ -95,6 +108,7 @@ LEONE</textarea></label>
       <div class="row">
         <label>Giorno settimana <input id="weekday"></label>
         <label>Data <input id="date"></label>
+      </div>
       </div>
       <label>Riga in basso <input id="bottom" value="NOT AN ORDINARY CULTO"></label>
     </section>
