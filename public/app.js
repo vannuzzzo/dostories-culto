@@ -240,12 +240,47 @@ $('export').addEventListener('click', async () => {
     const blob = await (await api('/render', { method: 'POST', body: fd })).blob();
     const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `${name}.mp4` });
     a.click();
+    remember(name);
     status(`Esportato: ${name}.mp4`);
   } catch (e) { status(e.message, true); }
   $('export').disabled = false;
   $('export').textContent = 'Esporta MP4';
 });
 
+// --- Memory: the last state is autosaved and reopened; every export is kept in the dropdown.
+// shortcut: only texts, sliders and colors are saved — background video, logos and music are files and must be reloaded; localStorage is per browser.
+const saved = ['pick', 'calendar', 'calTitle1', 'calTitle2', 'calHours', 'topSize', 'month', 'day', 'sup', 'showVenue', 'venue', 'lineup', 'djSize', 'label', 'names', 'from', 'till', 'weekday', 'date', 'bottom', 'logoSize', 'logoColor', 'hue', 'sat'];
+const calRows = () => [...document.querySelectorAll('.calDay')];
+const snap = () => ({ ...Object.fromEntries(saved.map((id) => [id, $(id).type === 'checkbox' ? $(id).checked : $(id).value])), cal: calRows().map((r) => [r.children[0].value, r.children[1].value]) });
+const store = (k, v) => { try { localStorage.setItem(`culto:${k}`, JSON.stringify(v)); } catch { /* storage blocked: memory just doesn't persist */ } };
+const load = (k) => { try { return JSON.parse(localStorage.getItem(`culto:${k}`)); } catch { return null; } };
+function restore(s) {
+  if (!s) return;
+  const ids = saved.filter((id) => id in s);
+  ids.forEach((id) => { if ($(id).type === 'checkbox') $(id).checked = s[id]; else $(id).value = s[id]; });
+  calRows().forEach((r, i) => { [r.children[0].value, r.children[1].value] = s.cal?.[i] ?? ['', '']; });
+  // Fire the normal listeners so toggles, labels and the video filter follow; 'pick' is skipped because its handler would overwrite the texts.
+  ids.filter((id) => id !== 'pick').forEach((id) => $(id).dispatchEvent(new Event($(id).type === 'checkbox' || $(id).tagName === 'SELECT' ? 'change' : 'input', { bubbles: true })));
+  redraw();
+}
+document.querySelector('aside').addEventListener('input', () => store('last', snap()));
+document.querySelector('aside').addEventListener('change', () => store('last', snap()));
+const exportsList = () => load('exports') ?? [];
+function renderHistory() {
+  $('history').replaceChildren($('history').options[0], ...exportsList().map((e, i) => Object.assign(document.createElement('option'), { value: i, textContent: e.name })));
+}
+function remember(name) {
+  store('exports', [{ name, s: snap() }, ...exportsList().filter((e) => e.name !== name)].slice(0, 30));
+  renderHistory();
+}
+$('history').addEventListener('change', () => {
+  restore(exportsList()[$('history').value]?.s);
+  $('history').value = '';
+  store('last', snap());
+});
+
 // Font must be loaded before the first draw, or the canvas uses a fallback font.
 await loadFont().catch((e) => status(e.message, true));
 applyDate();
+restore(load('last'));
+renderHistory();
