@@ -148,7 +148,7 @@ LEONE</textarea></label>
       </div>
       <div id="tab-search" class="row" style="--n:1">
         <div class="row" style="grid-template-columns: 1fr auto auto">
-          <input id="q" placeholder="Artista o titolo">
+          <input id="q" placeholder="Artista o titolo" list="pastSearches" autocomplete="off"><datalist id="pastSearches"></datalist>
           <select id="source"><option value="yt">YouTube</option><option value="sc">SoundCloud</option></select>
           <button id="go">Cerca</button>
         </div>

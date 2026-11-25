@@ -182,6 +182,7 @@ async function api(url, opts) {
 async function search() {
   const q = $('q').value.trim();
   if (!q) return;
+  rememberSearch(q);
   status('Cerco…');
   $('results').innerHTML = '';
   try {
@@ -279,8 +280,16 @@ $('history').addEventListener('change', () => {
   store('last', snap());
 });
 
+// Past song searches feed the native suggestion list of the search box.
+const renderSearches = () => $('pastSearches').replaceChildren(...(load('searches') ?? []).map((q) => Object.assign(document.createElement('option'), { value: q })));
+function rememberSearch(q) {
+  store('searches', [q, ...(load('searches') ?? []).filter((x) => x !== q)].slice(0, 15));
+  renderSearches();
+}
+
 // Font must be loaded before the first draw, or the canvas uses a fallback font.
 await loadFont().catch((e) => status(e.message, true));
 applyDate();
 restore(load('last'));
 renderHistory();
+renderSearches();
